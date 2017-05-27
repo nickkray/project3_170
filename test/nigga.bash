@@ -1,0 +1,1 @@
+../vm/nachos -x 
