@@ -610,6 +610,9 @@ void closeImpl()
 void pageFaultHandler() 
 {
     int faultingVirtAddr = machine->ReadRegister(BadVAddrReg);
+
+    fprintf(stderr, "swappinggggg...************\n");      
+
     virtualMemoryManager->swapPageIn(faultingVirtAddr);
 
     int pid = currentThread->space->getPCB()->getPID();

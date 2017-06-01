@@ -54,16 +54,65 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
 {
 
         TranslationEntry* currPageEntry;
+
         if(nextVictim>= NumPhysPages) {//no more space available
-                fprintf(stderr, "Fatal error: No more space available\n");
-                exit(1);
-                return;
+                fprintf(stderr, "No more space available - attempting second chance algo\n");
+
+                for(int i=0; i< NumPhysPages; i++){
+                    fprintf(stderr, "trynna get i = %d\n",i);
+
+                    FrameInfo * physPageInfo = physicalMemoryInfo + i;
+
+                    currPageEntry = getPageTableEntry(physPageInfo);
+                    if(currPageEntry->use == true){
+                        currPageEntry->use = false;
+                    }else{  //this is our vicitm
+                        fprintf(stderr, "found our victim~~ i = %d\n",i);                            
+                        if(currPageEntry->dirty){
+                            fprintf(stderr, "dirtier than dom's mother i = %d\n",i);      
+
+                            char* physMemLoc = machine->mainMemory + currPageEntry->physicalPage * PageSize;
+                            writeToSwap(physMemLoc, PageSize, currPageEntry->locationOnDisk);
+
+                            fprintf(stderr, "wrote victim to swap i = %d\n",i);                                  
+
+                            //memoryManager->clearPage(currPage->physicalPage);
+
+                            loadPageToCurrVictim(virtAddr);
+
+                        }else{
+                            fprintf(stderr, "not quite as dirty i = %d\n",i);      
+                         /*   int newSwap = allocSwapSector();
+
+                            char* physMemLoc = machine->mainMemory + currPageEntry->physicalPage * PageSize;
+                            swapFile->WriteAt(physMemLoc, PageSize, newSwap);
+                                */
+                            //loadPageToCurrVictim(physPageInfo->pageTableIndex);
+
+                            //currentThread->space = physPageInfo->space;
+
+                            physPageInfo->space = currentThread->space;
+                            physPageInfo->pageTableIndex = virtAddr / PageSize;
+
+                            loadPageToCurrVictim(virtAddr);
+
+                        }
+
+                        
+                    }
+                    if(i==NumPhysPages - 1)
+                        i=0;
+                }
+               // fprintf(stderr, "Fatal error: No more space available\n");
+               // exit(1);
+                return;             //WE FIXED IT! hopefully....
         }
 
         FrameInfo * physPageInfo = physicalMemoryInfo + nextVictim;
         //We assume this page is not occupied by any process space
         physPageInfo->space = currentThread->space;
         physPageInfo->pageTableIndex = virtAddr / PageSize;
+
         currPageEntry = getPageTableEntry(physPageInfo);
         currPageEntry->physicalPage = memoryManager->getPage();
         loadPageToCurrVictim(virtAddr);
