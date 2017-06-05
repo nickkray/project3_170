@@ -53,59 +53,61 @@ void VirtualMemoryManager::writeToSwap(char *page, int pageSize,
 void VirtualMemoryManager::swapPageIn(int virtAddr)
 {
 
+        fprintf(stderr, "virt addr = %d\n",virtAddr); 
+
         TranslationEntry* currPageEntry;
 
-        if(nextVictim>= NumPhysPages) {//no more space available
+        if(memoryManager->getNumFreePages() <1) {//no more space available
                 fprintf(stderr, "No more space available - attempting second chance algo\n");
 
-                for(int i=0; i< NumPhysPages; i++){
-                    fprintf(stderr, "trynna get i = %d\n",i);
+                while(true){
 
-                    FrameInfo * physPageInfo = physicalMemoryInfo + i;
+                    nextVictim = nextVictim % NumPhysPages;
 
-                    currPageEntry = getPageTableEntry(physPageInfo);
-                    if(currPageEntry->use == true){
-                        currPageEntry->use = false;
+                   fprintf(stderr, "trynna get i = %d\n",nextVictim);
+
+                    FrameInfo * physPageInfo = physicalMemoryInfo + nextVictim;
+
+                    fprintf(stderr, "our pointer is chillin doe but = %d\n",physPageInfo->pageTableIndex);
+
+                    TranslationEntry* victimPageEntry = getPageTableEntry(physPageInfo);
+
+
+                    if(victimPageEntry->use == true){
+                        fprintf(stderr, "setting ->use = false\n");
+                        victimPageEntry->use = false;
                     }else{  //this is our vicitm
-                        fprintf(stderr, "found our victim~~ i = %d\n",i);                            
-                        if(currPageEntry->dirty){
-                            fprintf(stderr, "dirtier than dom's mother i = %d\n",i);      
 
-                            char* physMemLoc = machine->mainMemory + currPageEntry->physicalPage * PageSize;
-                            writeToSwap(physMemLoc, PageSize, currPageEntry->locationOnDisk);
+                        fprintf(stderr, "found our victim~~ i = %d\n",nextVictim);                            
 
-                            fprintf(stderr, "wrote victim to swap i = %d\n",i);                                  
-
-                            //memoryManager->clearPage(currPage->physicalPage);
-
-                            loadPageToCurrVictim(virtAddr);
-
-                        }else{
-                            fprintf(stderr, "not quite as dirty i = %d\n",i);      
-                         /*   int newSwap = allocSwapSector();
-
-                            char* physMemLoc = machine->mainMemory + currPageEntry->physicalPage * PageSize;
-                            swapFile->WriteAt(physMemLoc, PageSize, newSwap);
-                                */
-                            //loadPageToCurrVictim(physPageInfo->pageTableIndex);
-
-                            //currentThread->space = physPageInfo->space;
-
-                            physPageInfo->space = currentThread->space;
-                            physPageInfo->pageTableIndex = virtAddr / PageSize;
-
-                            loadPageToCurrVictim(virtAddr);
-
+                        if(victimPageEntry->valid && victimPageEntry->dirty) {
+                            char *physMemLoc = machine->mainMemory + victimPageEntry->physicalPage * PageSize;
+                            writeToSwap(physMemLoc, PageSize, victimPageEntry->locationOnDisk);
                         }
 
-                        
+                        victimPageEntry->valid = false;
+
+                        physPageInfo->space = currentThread->space;
+                        physPageInfo->pageTableIndex = virtAddr / PageSize;
+                        currPageEntry = getPageTableEntry(physPageInfo);
+                        currPageEntry->physicalPage = nextVictim;
+                     
+                        // Replace page
+                        loadPageToCurrVictim(virtAddr);
+                     
+                        nextVictim += 1;
+                        nextVictim = nextVictim % NumPhysPages;
+
+                        return;
+
                     }
-                    if(i==NumPhysPages - 1)
-                        i=0;
+
+                    nextVictim += 1;
+                    
                 }
                // fprintf(stderr, "Fatal error: No more space available\n");
                // exit(1);
-                return;             //WE FIXED IT! hopefully....
+
         }
 
         FrameInfo * physPageInfo = physicalMemoryInfo + nextVictim;
