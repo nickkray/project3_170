@@ -53,36 +53,38 @@ void VirtualMemoryManager::writeToSwap(char *page, int pageSize,
 void VirtualMemoryManager::swapPageIn(int virtAddr)
 {
 
-        fprintf(stderr, "virt addr = %d\n",virtAddr); 
+ //       fprintf(stderr, "virt addr = %d\n",virtAddr); 
 
-        TranslationEntry* currPageEntry;
+        TranslationEntry* currPageEntry, victimPageEntry;
+        FrameInfo * physPageInfo;
 
         if(memoryManager->getNumFreePages() <1) {//no more space available
-                fprintf(stderr, "No more space available - attempting second chance algo\n");
+ //               fprintf(stderr, "No more space available - attempting second chance algo\n");
 
                 while(true){
 
-                    nextVictim = nextVictim % NumPhysPages;
-
-                   fprintf(stderr, "trynna get i = %d\n",nextVictim);
+  //                 fprintf(stderr, "trynna get i = %d\n",nextVictim);
 
                     FrameInfo * physPageInfo = physicalMemoryInfo + nextVictim;
 
-                    fprintf(stderr, "our pointer is chillin doe but = %d\n",physPageInfo->pageTableIndex);
+   //                 fprintf(stderr, "our pointer is chillin doe but = %d\n",physPageInfo->pageTableIndex);
 
                     TranslationEntry* victimPageEntry = getPageTableEntry(physPageInfo);
 
-
-                    if(victimPageEntry->use == true){
-                        fprintf(stderr, "setting ->use = false\n");
+                    if(victimPageEntry->use){
+  //                      fprintf(stderr, "setting ->use = false\n");
                         victimPageEntry->use = false;
+
+                        nextVictim += 1;
+                        nextVictim = nextVictim % NumPhysPages;
+
                     }else{  //this is our vicitm
 
-                        fprintf(stderr, "found our victim~~ i = %d\n",nextVictim);                            
+      //                  fprintf(stderr, "found our victim~~ i = %d\n",nextVictim);                            
 
                         if(victimPageEntry->valid && victimPageEntry->dirty) {
                             char *physMemLoc = machine->mainMemory + victimPageEntry->physicalPage * PageSize;
-                            writeToSwap(physMemLoc, PageSize, victimPageEntry->locationOnDisk);
+                            writeToSwap(physMemLoc, PageSize, physPageInfo->space->locationOnDisk[nextVictim]);
                         }
 
                         victimPageEntry->valid = false;
@@ -102,7 +104,7 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
 
                     }
 
-                    nextVictim += 1;
+                    
                     
                 }
                // fprintf(stderr, "Fatal error: No more space available\n");
@@ -110,15 +112,21 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
 
         }
 
-        FrameInfo * physPageInfo = physicalMemoryInfo + nextVictim;
-        //We assume this page is not occupied by any process space
+        int freePage = memoryManager->getPage();
+ 
+        physPageInfo = physicalMemoryInfo + freePage;
+ 
         physPageInfo->space = currentThread->space;
         physPageInfo->pageTableIndex = virtAddr / PageSize;
-
+ 
+        // Get translation table entry
         currPageEntry = getPageTableEntry(physPageInfo);
-        currPageEntry->physicalPage = memoryManager->getPage();
+ 
+        // Find free page in memory
+        currPageEntry->physicalPage = freePage;
+ 
         loadPageToCurrVictim(virtAddr);
-        nextVictim = nextVictim + 1;
+        return;
 }
 
 
@@ -144,7 +152,7 @@ void VirtualMemoryManager::releasePages(AddrSpace* space)
             memoryManager->clearPage(currPage->physicalPage);
             physicalMemoryInfo[currPage->physicalPage].space = NULL; 
         }
-        swapSectorMap->Clear((currPage->locationOnDisk) / PageSize);
+        swapSectorMap->Clear((space->locationOnDisk[nextVictim]) / PageSize);
     }
 }
 
