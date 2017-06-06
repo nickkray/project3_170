@@ -611,7 +611,7 @@ void pageFaultHandler()
 {
     int faultingVirtAddr = machine->ReadRegister(BadVAddrReg);
 
-    fprintf(stderr, "swappinggggg...************\n");      
+ //   fprintf(stderr, "swappinggggg...************ %d\n", faultingVirtAddr);      
 
     virtualMemoryManager->swapPageIn(faultingVirtAddr);
 
@@ -619,7 +619,7 @@ void pageFaultHandler()
     int virtPage = faultingVirtAddr / PageSize;
     int physPage = currentThread->space->getPageTableEntry(virtPage)->physicalPage;
 
-    //fprintf(stderr,"L %d: %d -> %d\n", pid, virtPage, physPage);
+//    fprintf(stderr,"L %d: %d -> %d\n", pid, virtPage, physPage);
     DEBUG('v',"L %d: %d -> %d\n", pid, virtPage, physPage);
 }
 
