@@ -58,7 +58,7 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
         TranslationEntry* currPageEntry, victimPageEntry;
         FrameInfo * physPageInfo;
 
-        if(memoryManager->getNumFreePages() <1) {//no more space available
+        if(memoryManager->getNumFreePages() ==0) {//no more space available
  //               fprintf(stderr, "No more space available - attempting second chance algo\n");
 
                 while(true){
@@ -137,7 +137,7 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
 */
 void VirtualMemoryManager::releasePages(AddrSpace* space)
 {
-    printf("trying to release here\n");
+//    printf("trying to release here\n");
     for (int i = 0; i < space->getNumPages(); i++)
     {
         TranslationEntry* currPage = space->getPageTableEntry(i);
@@ -166,23 +166,23 @@ void VirtualMemoryManager::releasePages(AddrSpace* space)
 */
 void VirtualMemoryManager::loadPageToCurrVictim(int virtAddr)
 {
-    printf("trying to load to current vic\n");
+  //  printf("trying to load to current vic\n");
 
     int pageTableIndex = virtAddr / PageSize;
 
 
     TranslationEntry* page = currentThread->space->getPageTableEntry(pageTableIndex);
-    printf("tried to get pageTableEntry\n");
+    //printf("tried to get pageTableEntry\n");
     char* physMemLoc = machine->mainMemory + page->physicalPage * PageSize;
     int swapSpaceLoc = currentThread->space->locationOnDisk[pageTableIndex];//page->locationOnDisk;
-    printf("tried to get locationOnDisk\n");
+    //printf("tried to get locationOnDisk\n");
     swapFile->ReadAt(physMemLoc, PageSize, swapSpaceLoc);
-    printf("tried to swapFile\n");
+    //printf("tried to swapFile\n");
 
   //  int swapSpaceIndex = swapSpaceLoc / PageSize;
  //   SwapSectorInfo * swapPageInfo = swapSpaceInfo + swapSpaceIndex;
     page->valid = TRUE;
-printf("set the valid bit\n");
+//printf("set the valid bit\n");
 //    swapPageInfo->setValidBit(TRUE);
 //    swapPageInfo->setPhysMemPageNum(page->physicalPage);
 }

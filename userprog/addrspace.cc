@@ -153,6 +153,7 @@ AddrSpace::AddrSpace(const AddrSpace* other, PCB* newPCB)
 
     this->pcb = newPCB;
     pageTable = new TranslationEntry[numPages];
+    locationOnDisk = new int[numPages];
 
     for (unsigned int i = 0; i < numPages; i++) { 
 
