@@ -54,12 +54,12 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
 {
 
  //       fprintf(stderr, "virt addr = %d\n",virtAddr); 
-
+        //printf("trying to swap in\n");
         TranslationEntry* currPageEntry, victimPageEntry;
         FrameInfo * physPageInfo;
 
         if(memoryManager->getNumFreePages() <1) {//no more space available
- //               fprintf(stderr, "No more space available - attempting second chance algo\n");
+          //      fprintf(stderr, "No more space available - attempting second chance algo\n");
 
                 while(true){
 
@@ -80,11 +80,11 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
 
                     }else{  //this is our vicitm
 
-      //                  fprintf(stderr, "found our victim~~ i = %d\n",nextVictim);                            
+                       // fprintf(stderr, "found our victim~~ i = %d\n",nextVictim);                            
 
                         if(victimPageEntry->valid && victimPageEntry->dirty) {
                             char *physMemLoc = machine->mainMemory + victimPageEntry->physicalPage * PageSize;
-                            writeToSwap(physMemLoc, PageSize, physPageInfo->space->locationOnDisk[nextVictim]);
+                            writeToSwap(physMemLoc, PageSize, physPageInfo->space->locationOnDisk[physPageInfo->pageTableIndex]);
                         }
 
                         victimPageEntry->valid = false;
@@ -136,6 +136,7 @@ void VirtualMemoryManager::swapPageIn(int virtAddr)
 */
 void VirtualMemoryManager::releasePages(AddrSpace* space)
 {
+   // printf("trying to release here\n");
     for (int i = 0; i < space->getNumPages(); i++)
     {
         TranslationEntry* currPage = space->getPageTableEntry(i);
@@ -143,6 +144,8 @@ void VirtualMemoryManager::releasePages(AddrSpace* space)
  //     SwapSectorInfo * swapPageInfo = swapSpaceInfo + swapSpaceIndex;
 //      swapPageInfo->removePage(currPage);
       //swapPageInfo->pageTableEntry = NULL;
+
+	int l = space->locationOnDisk[i];
 
         if (currPage->valid == TRUE)
         {
@@ -152,7 +155,7 @@ void VirtualMemoryManager::releasePages(AddrSpace* space)
             memoryManager->clearPage(currPage->physicalPage);
             physicalMemoryInfo[currPage->physicalPage].space = NULL; 
         }
-        swapSectorMap->Clear((space->locationOnDisk[nextVictim]) / PageSize);
+        swapSectorMap->Clear(l / PageSize);
     }
 }
 
@@ -162,11 +165,18 @@ void VirtualMemoryManager::releasePages(AddrSpace* space)
 */
 void VirtualMemoryManager::loadPageToCurrVictim(int virtAddr)
 {
+    //printf("trying to load to current vic\n");
+
     int pageTableIndex = virtAddr / PageSize;
+
+
     TranslationEntry* page = currentThread->space->getPageTableEntry(pageTableIndex);
+   // printf("tried to get pageTableEntry\n");
     char* physMemLoc = machine->mainMemory + page->physicalPage * PageSize;
-    int swapSpaceLoc = page->locationOnDisk;
+    int swapSpaceLoc = currentThread->space->locationOnDisk[pageTableIndex];//page->locationOnDisk;
+   // printf("tried to get locationOnDisk\n");
     swapFile->ReadAt(physMemLoc, PageSize, swapSpaceLoc);
+   // printf("tried to swapFile\n");
 
   //  int swapSpaceIndex = swapSpaceLoc / PageSize;
  //   SwapSectorInfo * swapPageInfo = swapSpaceInfo + swapSpaceIndex;
